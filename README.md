@@ -1,2 +1,2 @@
 # go-pure
-A static analysis tool for go-lang that ensure some designated functions are pure.
+A static analysis tool for go-lang that ensures designated functions are pure.
