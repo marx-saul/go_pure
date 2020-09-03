@@ -1,9 +1,9 @@
 package main
 
 import (
-	"pure"
+	"go_pure"
 	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
-func main() { unitchecker.Main(pure.Analyzer) }
+func main() { unitchecker.Main(go_pure.Analyzer) }
 
