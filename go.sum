@@ -1,5 +1,7 @@
 github.com/marx-saul/go-pure v0.0.0-20200903084612-11a5b402a977 h1:AA+AhU4wOOOR/1+JIegOyO2rxuE7jXQUUwliDfuem0M=
 github.com/marx-saul/go-pure v0.0.0-20200903084612-11a5b402a977/go.mod h1:uEj4odn2BOKqL98X5tRgzNWC2RsDO3qViRCdOHtVPnY=
+github.com/marx-saul/go_pure v0.0.0-20200903094310-d3b45acd730d h1:7ZTaLXKwRfZGwdbFsFzK1fb/YCdy7aZZzxpIi/Y0B6A=
+github.com/marx-saul/go_pure v0.0.0-20200903094310-d3b45acd730d/go.mod h1:03OVWhbjSxim3c2IM2S2MhtTUylW5zMCr9YnqhAiyHc=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
