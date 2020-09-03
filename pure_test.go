@@ -3,7 +3,7 @@ package pure_test
 import (
 	"testing"
 
-	"pure"
+	"github.com/marx-saul/go-pure"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
