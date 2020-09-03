@@ -1,8 +1,8 @@
-package pure
+package go_pure
 
 import (
 	"go/ast"
-	//"go/types"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -33,7 +33,7 @@ func (f *isWrapper) String() string {
 }
 */
 func run(pass *analysis.Pass) (interface{}, error) {
-	pureFuncDict := make(map[*ast.FuncDecl]bool)
+	pureFuncDict := make(map[types.Object]bool)
 	
 	// collect all functions and their purity
 	for _, file := range pass.Files {
@@ -41,7 +41,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			switch node := decl.(type) {
 			case *ast.FuncDecl:
 				if pureAttributed(node) {
-					pureFuncDict[node] = true
+					pureFuncDict[pass.TypesInfo.Defs[node.Name]] = true
 				}
 			}
 		}
@@ -61,7 +61,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch node := node.(type) {
 		case *ast.FuncDecl:
-			if pureFuncDict[node] {
+			if pureFuncDict[pass.TypesInfo.Defs[node.Name]] {
 				checkFuncPurity(pass, node, pureFuncDict)
 			}
 		}
@@ -84,17 +84,18 @@ func pureAttributed(fd *ast.FuncDecl) bool {
 }
 
 // look inside function body
-func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl, dict map[*ast.FuncDecl]bool) bool {
+func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl, dict map[types.Object]bool) bool {
 	if fd == nil {
 		return true
 	}
 	result := true
 	
+	//fmt.Println(fd.Name.Name)
 	// see all identifiers
-	ast.Inspect(fd, func(node ast.Node) bool {
+	ast.Inspect(fd.Body, func(node ast.Node) bool {
 		switch node := node.(type) {
 		case *ast.Ident:
-			result = result && checkIdent(pass, node, fd, dict)
+			result = checkIdent(pass, node, fd, dict) && result
 		}
 		return true
 	})
@@ -103,34 +104,35 @@ func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl, dict map[*ast.FuncDe
 }
 
 // fd : the func-decl we are in
-func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl, dict map[*ast.FuncDecl]bool) bool {
-	/*
-	obj := pass.TypesInfo.Defs[ident]
-	if obj == nil {
-		fmt.Println(ident.String(), " : not found")
-		return true
-	}
-	
-	// reference to a function
-	if _, ok := obj.Type().(*types.Signature); ok {
-		if !dict[obj] {
-			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m cannot call impure function \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)
-		}
-	} else {
-		fmt.Println(obj.String(), " : ", obj.Type().String())
-	}
-	return true
+func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl, dict map[types.Object]bool) bool {
+	/*fmt.Println(ident, ":", ident.Name)
+	fmt.Println("\t", ident.Obj)
+	fmt.Println("\t", pass.TypesInfo.Defs[ident])
+	fmt.Println("\t", pass.TypesInfo.Uses[ident])
+	fmt.Println()
 	*/
-	
-	
 	// look for the declaration of the identifier
 	if ident.Obj == nil {
 		if pass.TypesInfo.Types[ident].IsType() {
 			return true
-		} else {
-			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m refers to a symbol \x1b[1m%s\x1b[0m which is not declared within the same package.\n", fd.Name.Name, ident.Name)
+		}
+		
+		use := pass.TypesInfo.Uses[ident]
+		if use == nil {
+			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m refers to a unresolvable symbol \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)
 			return false
 		}
+		
+		// it is a function
+		if _, ok := use.Type().(*types.Signature); ok {
+			// it is not pure attributed
+			if !dict[use]  {
+				pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m cannot call impure function \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)
+				return false
+			}
+		}
+		
+		return true
 	}
 	
 	switch decl := ident.Obj.Decl.(type) {
@@ -138,7 +140,7 @@ func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl, dict ma
 	case *ast.FuncDecl:
 		// do not call checkFuncPurity; otherwise it can loop forever
 		// call of impure function inside a pure function
-		if dict[decl] {
+		if dict[pass.TypesInfo.Defs[decl.Name]] {
 			return true
 		} else {
 			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m cannot call impure function \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)

@@ -1,4 +1,4 @@
-package pure_test
+package go_pure_test
 
 import (
 	"testing"

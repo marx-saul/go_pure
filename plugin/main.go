@@ -7,7 +7,7 @@ package main
 import (
 	"strings"
 
-	"pure"
+	"gp_pure"
 	"golang.org/x/tools/go/analysis"
 )
 

@@ -2,8 +2,7 @@ package a
 
 //import "fmt"
 
-// Hello!
-// I am a.f()
+// @pure
 func f() {
 	var gopher int32
 	print(gopher)
