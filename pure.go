@@ -2,6 +2,7 @@ package pure
 
 import (
 	"go/ast"
+	//"go/types"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -22,16 +23,30 @@ var Analyzer = &analysis.Analyzer{
 	Requires:	[]*analysis.Analyzer{
 		inspect.Analyzer,
 	},
-	FactTypes:	[]analysis.Fact{new(isWrapper)},
+	//FactTypes:	[]analysis.Fact{new(isWrapper)},
 }
-
+/*
 type isWrapper struct {}
 func (f *isWrapper) AFact() {}
 func (f *isWrapper) String() string {
 	return "FACT"
 }
-
+*/
 func run(pass *analysis.Pass) (interface{}, error) {
+	pureFuncDict := make(map[*ast.FuncDecl]bool)
+	
+	// collect all functions and their purity
+	for _, file := range pass.Files {
+		for _, decl := range file.Decls {
+			switch node := decl.(type) {
+			case *ast.FuncDecl:
+				if pureAttributed(node) {
+					pureFuncDict[node] = true
+				}
+			}
+		}
+	}
+	
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
 	nodeFilter := []ast.Node{
@@ -42,11 +57,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch node := node.(type) {
 		case *ast.FuncDecl:
-			if pureAttributed(node) {
-				checkFuncPurity(pass, node)
+			if pureFuncDict[node] {
+				checkFuncPurity(pass, node, pureFuncDict)
 			}
 		}
 	})
+	
 	return nil, nil
 }
 
@@ -64,7 +80,7 @@ func pureAttributed(fd *ast.FuncDecl) bool {
 }
 
 // look inside function body
-func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl) bool {
+func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl, dict map[*ast.FuncDecl]bool) bool {
 	if fd == nil {
 		return true
 	}
@@ -74,7 +90,7 @@ func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl) bool {
 	ast.Inspect(fd, func(node ast.Node) bool {
 		switch node := node.(type) {
 		case *ast.Ident:
-			result = result && checkIdent(pass, node, fd)
+			result = result && checkIdent(pass, node, fd, dict)
 		}
 		return true
 	})
@@ -83,13 +99,32 @@ func checkFuncPurity(pass *analysis.Pass, fd *ast.FuncDecl) bool {
 }
 
 // fd : the func-decl we are in
-func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl) bool {
+func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl, dict map[*ast.FuncDecl]bool) bool {
+	/*
+	obj := pass.TypesInfo.Defs[ident]
+	if obj == nil {
+		fmt.Println(ident.String(), " : not found")
+		return true
+	}
+	
+	// reference to a function
+	if _, ok := obj.Type().(*types.Signature); ok {
+		if !dict[obj] {
+			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m cannot call impure function \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)
+		}
+	} else {
+		fmt.Println(obj.String(), " : ", obj.Type().String())
+	}
+	return true
+	*/
+	
+	
 	// look for the declaration of the identifier
 	if ident.Obj == nil {
 		if pass.TypesInfo.Types[ident].IsType() {
 			return true
 		} else {
-			pass.Reportf(ident.NamePos, "\x1b[1m%s\x1b[0m was not found in this module. Cross-module-purity-check has not been implemented yet.\n", ident.Name)
+			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m refers to a symbol \x1b[1m%s\x1b[0m which is not declared within the same package.\n", fd.Name.Name, ident.Name)
 			return false
 		}
 	}
@@ -98,12 +133,13 @@ func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl) bool {
 	
 	case *ast.FuncDecl:
 		// do not call checkFuncPurity; otherwise it can loop forever
-		result := pureAttributed(decl)
 		// call of impure function inside a pure function
-		if !result {
+		if dict[decl] {
+			return true
+		} else {
 			pass.Reportf(ident.NamePos, "Pure function \x1b[1m%s\x1b[0m cannot call impure function \x1b[1m%s\x1b[0m\n", fd.Name.Name, ident.Name)
+			return false
 		}
-		return result
 	
 	case *ast.ValueSpec:
 		variable := decl.Names[0]
@@ -129,5 +165,6 @@ func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl) bool {
 	default:
 		return true
 	}
+	
 }
 
