@@ -8,7 +8,7 @@ import (
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
 	
-	//"fmt"
+	"fmt"
 	"strings"
 	//"reflect"
 )
@@ -47,7 +47,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	}
 	
-	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		fmt.Println("Unexpected Error")
+		return nil, nil
+	}
 
 	nodeFilter := []ast.Node{
 		(*ast.FuncDecl)(nil),
@@ -72,7 +76,7 @@ func pureAttributed(fd *ast.FuncDecl) bool {
 		return false
 	}
 	for _, comment := range fd.Doc.List {
-		if strings.Index(comment.Text, "@pure") != -1 {
+		if strings.Contains(comment.Text, "@pure") {
 			return true
 		}
 	}
@@ -167,4 +171,3 @@ func checkIdent(pass *analysis.Pass, ident *ast.Ident, fd *ast.FuncDecl, dict ma
 	}
 	
 }
-
