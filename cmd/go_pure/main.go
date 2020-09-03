@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go_pure"
+	"github.com/marx-saul/go_pure"
 	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
