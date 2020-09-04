@@ -1,6 +1,6 @@
 package a
 
-//import "fmt"
+import "fmt"
 
 // @pure
 func f() {
@@ -14,7 +14,7 @@ const global_const = 1
 // @pure
 func factorial(n int32) int32 {
 	if n <= 0 {
-		//fmt.Println("call")		// impure
+		fmt.Println("call")		// impure
 		//return global_var		// impure
 		return global_const	// pure
 		//return b.Fb()			// (impure)

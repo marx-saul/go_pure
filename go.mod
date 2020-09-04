@@ -1,4 +1,4 @@
-module go_pure
+module github.com/marx-saul/go_pure
 
 go 1.15
 
